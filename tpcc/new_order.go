@@ -173,16 +173,19 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	// TODO: support prepare statement
 
 	// Process 1
+	fmt.Println(newOrderSelectCustomer)
 	if err := s.newOrderStmts[newOrderSelectCustomer].QueryRowContext(ctx, d.wID, d.dID, d.cID).Scan(&d.cDiscount, &d.cLast, &d.cCredit, &d.wTax); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderSelectCustomer, err)
 	}
 
 	// Process 2
+	fmt.Println(newOrderSelectDistrict)
 	if err := s.newOrderStmts[newOrderSelectDistrict].QueryRowContext(ctx, d.dID, d.wID).Scan(&d.dNextOID, &d.dTax); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderSelectDistrict, err)
 	}
 
 	// Process 3
+	fmt.Println(newOrderUpdateDistrict)
 	if _, err := s.newOrderStmts[newOrderUpdateDistrict].ExecContext(ctx, d.dNextOID, d.dID, d.wID); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderUpdateDistrict, err)
 	}
@@ -190,6 +193,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 	oID := d.dNextOID
 
 	// Process 4
+	fmt.Println(newOrderInsertOrder)
 	if _, err := s.newOrderStmts[newOrderInsertOrder].ExecContext(ctx, oID, d.dID, d.wID, d.cID,
 		time.Now().Format(timeFormat), d.oOlCnt, allLocal); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderInsertOrder, err)
@@ -199,6 +203,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 
 	// INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (:o_id , :d _id , :w _id );
 	// query = `INSERT INTO new_order (no_o_id, no_d_id, no_w_id) VALUES (?, ?, ?)`
+	fmt.Println(newOrderInsertNewOrder)
 	if _, err := s.newOrderStmts[newOrderInsertNewOrder].ExecContext(ctx, oID, d.dID, d.wID); err != nil {
 		return fmt.Errorf("exec %s failed %v", newOrderInsertNewOrder, err)
 	}
@@ -243,6 +248,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		selectStockArgs[i*2] = d.wID
 		selectStockArgs[i*2+1] = items[i].olIID
 	}
+	fmt.Println(selectStockSQL)
 	rows, err = s.newOrderStmts[selectStockSQL].QueryContext(ctx, selectStockArgs...)
 	if err != nil {
 		return fmt.Errorf("exec %s failed %v", selectStockSQL, err)
@@ -276,6 +282,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		if item.olIID < 0 {
 			return nil
 		}
+		fmt.Println(newOrderUpdateStock)
 		if _, err = s.newOrderStmts[newOrderUpdateStock].ExecContext(ctx, item.sQuantity, item.olQuantity, item.remoteWarehouse, item.olIID, d.wID); err != nil {
 			return fmt.Errorf("exec %s failed %v", newOrderUpdateStock, err)
 		}
@@ -296,6 +303,7 @@ func (w *Workloader) runNewOrder(ctx context.Context, thread int) error {
 		insertOrderLineArgs[i*9+7] = item.olAmount
 		insertOrderLineArgs[i*9+8] = item.sDist
 	}
+	fmt.Println(insertOrderLineSQL)
 	if _, err = s.newOrderStmts[insertOrderLineSQL].ExecContext(ctx, insertOrderLineArgs...); err != nil {
 		return fmt.Errorf("exec %s failed %v", insertOrderLineSQL, err)
 	}

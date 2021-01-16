@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/csv"
+	"fmt"
 	"os"
 )
 
@@ -43,7 +44,7 @@ func (b *SQLBatchLoader) InsertValue(ctx context.Context, query []string) error 
 	}
 	b.buf.WriteString(sep)
 	b.buf.WriteString(query[0])
-
+	fmt.Println(b.insertHint, query)
 	b.count++
 
 	if b.count >= maxBatchCount {
